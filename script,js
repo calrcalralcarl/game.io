@@ -1,0 +1,110 @@
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const COLS = 10;
+const ROWS = 20;
+const BLOCK = 20;
+
+let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+let linesCleared = 0;
+const TARGET_LINES = 1;
+
+const shapes = [
+  [[1, 1, 1, 1]],       // I
+  [[1, 1], [1, 1]],    // O
+  [[0,1,0],[1,1,1]],   // T
+];
+
+let piece = randomPiece();
+
+function randomPiece() {
+  return {
+    shape: shapes[Math.floor(Math.random() * shapes.length)],
+    x: 3,
+    y: 0
+  };
+}
+
+function drawBlock(x, y) {
+  ctx.fillStyle = "cyan";
+  ctx.fillRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
+  ctx.strokeRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  board.forEach((row, y) =>
+    row.forEach((value, x) => {
+      if (value) drawBlock(x, y);
+    })
+  );
+
+  piece.shape.forEach((row, y) =>
+    row.forEach((value, x) => {
+      if (value) drawBlock(piece.x + x, piece.y + y);
+    })
+  );
+}
+
+function collide() {
+  return piece.shape.some((row, y) =>
+    row.some((value, x) => {
+      if (!value) return false;
+      let newX = piece.x + x;
+      let newY = piece.y + y;
+      return newX < 0 || newX >= COLS || newY >= ROWS || board[newY]?.[newX];
+    })
+  );
+}
+
+function merge() {
+  piece.shape.forEach((row, y) =>
+    row.forEach((value, x) => {
+      if (value) board[piece.y + y][piece.x + x] = 1;
+    })
+  );
+}
+
+function clearLines() {
+  board = board.filter(row => row.some(v => v === 0));
+  let cleared = ROWS - board.length;
+  linesCleared += cleared;
+  while (board.length < ROWS) board.unshift(Array(COLS).fill(0));
+}
+
+function drop() {
+  piece.y++;
+  if (collide()) {
+    piece.y--;
+    merge();
+    clearLines();
+
+    if (linesCleared >= TARGET_LINES) {
+      alert("You Win 💖\nHappy monthsary babyy!");
+      location.reload();
+    }
+
+    piece = randomPiece();
+    if (collide()) {
+      alert("Game Over 💔");
+      location.reload();
+    }
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") piece.x--;
+  if (e.key === "ArrowRight") piece.x++;
+  if (e.key === "ArrowDown") drop();
+
+  if (collide()) {
+    if (e.key === "ArrowLeft") piece.x++;
+    if (e.key === "ArrowRight") piece.x--;
+  }
+});
+
+setInterval(() => {
+  drop();
+  draw();
+}, 400);
