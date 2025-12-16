@@ -1,44 +1,142 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Love Tetris 💖</title>
-  <style>
-    body {
-      background: #111;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-    canvas {
-      background: black;
-      display: block;
-      margin: 20px auto;
-      border: 2px solid white;
-    }
-    #letter {
-      display: none;
-      margin-top: 20px;
-      font-size: 18px;
-      white-space: pre-line;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Love Tetris 💖</title>
+<style>
+  body {
+    background: #111;
+    color: white;
+    text-align: center;
+    font-family: Arial;
+  }
+  canvas {
+    background: black;
+    border: 2px solid white;
+    display: block;
+    margin: 20px auto;
+  }
+  #letter {
+    display: none;
+    white-space: pre-line;
+    margin-top: 20px;
+  }
+</style>
 </head>
+
 <body>
 
 <h1>Love Tetris 💖</h1>
 <p>Clear 1 line to win</p>
 
-<canvas id="game" width="240" height="400"></canvas>
+<canvas id="game" width="200" height="400"></canvas>
 
 <div id="letter">
-💖 Happy Monthsary 💖  
-As you said, time flies so fast.  
-Thank you for all the moments we shared —  
-the laughs, tampuhan, and everything in between.  
+💖 Happy Monthsary 💖
+Thank you for everything.
 I love you always.
 </div>
 
-<script src="script.js"></script>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const COLS = 10, ROWS = 20, SIZE = 20;
+ctx.scale(SIZE, SIZE);
+
+let board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+
+const SHAPES = [
+  [[1,1,1,1]],
+  [[1,1],[1,1]],
+  [[0,1,0],[1,1,1]]
+];
+
+let piece = newPiece();
+let cleared = 0;
+
+function newPiece() {
+  return {
+    shape: SHAPES[Math.floor(Math.random()*SHAPES.length)],
+    x: 3,
+    y: 0
+  };
+}
+
+function drawBlock(x,y) {
+  ctx.fillStyle = "cyan";
+  ctx.fillRect(x,y,1,1);
+  ctx.strokeStyle = "black";
+  ctx.strokeRect(x,y,1,1);
+}
+
+function draw() {
+  ctx.clearRect(0,0,COLS,ROWS);
+
+  board.forEach((row,y) =>
+    row.forEach((v,x) => v && drawBlock(x,y))
+  );
+
+  piece.shape.forEach((row,y) =>
+    row.forEach((v,x) => v && drawBlock(piece.x+x, piece.y+y))
+  );
+}
+
+function collide(px = piece.x, py = piece.y) {
+  return piece.shape.some((row,y) =>
+    row.some((v,x) => {
+      if (!v) return false;
+      let nx = px+x, ny = py+y;
+      return nx<0 || nx>=COLS || ny>=ROWS || board[ny]?.[nx];
+    })
+  );
+}
+
+function merge() {
+  piece.shape.forEach((row,y) =>
+    row.forEach((v,x) => v && (board[piece.y+y][piece.x+x]=1))
+  );
+}
+
+function clearLines() {
+  for (let y=ROWS-1; y>=0; y--) {
+    if (board[y].every(v=>v)) {
+      board.splice(y,1);
+      board.unshift(Array(COLS).fill(0));
+      cleared++;
+      if (cleared >= 1) {
+        document.getElementById("letter").style.display="block";
+        clearInterval(loop);
+      }
+    }
+  }
+}
+
+function drop() {
+  piece.y++;
+  if (collide()) {
+    piece.y--;
+    merge();
+    clearLines();
+    piece = newPiece();
+    if (collide()) {
+      alert("Game Over");
+      location.reload();
+    }
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key==="ArrowLeft" && !collide(piece.x-1)) piece.x--;
+  if (e.key==="ArrowRight" && !collide(piece.x+1)) piece.x++;
+  if (e.key==="ArrowDown") drop();
+});
+
+const loop = setInterval(()=>{
+  drop();
+  draw();
+},500);
+</script>
+
 </body>
 </html>
