@@ -5,21 +5,25 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 20;
 
-let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-let linesCleared = 0;
-const TARGET_LINES = 1;
+ctx.scale(BLOCK, BLOCK);
 
-const shapes = [
-  [[1, 1, 1, 1]],       // I
-  [[1, 1], [1, 1]],    // O
-  [[0,1,0],[1,1,1]],   // T
+// Create board
+let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+
+// Tetris shapes
+const SHAPES = [
+  [[1, 1, 1, 1]],          // I
+  [[1, 1], [1, 1]],       // O
+  [[0, 1, 0], [1, 1, 1]]  // T
 ];
 
-let piece = randomPiece();
+let piece = newPiece();
+let linesCleared = 0;
+const TARGET = 1;
 
-function randomPiece() {
+function newPiece() {
   return {
-    shape: shapes[Math.floor(Math.random() * shapes.length)],
+    shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
     x: 3,
     y: 0
   };
@@ -27,12 +31,13 @@ function randomPiece() {
 
 function drawBlock(x, y) {
   ctx.fillStyle = "cyan";
-  ctx.fillRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
-  ctx.strokeRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
+  ctx.fillRect(x, y, 1, 1);
+  ctx.strokeStyle = "black";
+  ctx.strokeRect(x, y, 1, 1);
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function drawBoard() {
+  ctx.clearRect(0, 0, COLS, ROWS);
 
   board.forEach((row, y) =>
     row.forEach((value, x) => {
@@ -47,13 +52,18 @@ function draw() {
   );
 }
 
-function collide() {
-  return piece.shape.some((row, y) =>
+function collide(px = piece.x, py = piece.y, shape = piece.shape) {
+  return shape.some((row, y) =>
     row.some((value, x) => {
       if (!value) return false;
-      let newX = piece.x + x;
-      let newY = piece.y + y;
-      return newX < 0 || newX >= COLS || newY >= ROWS || board[newY]?.[newX];
+      let nx = px + x;
+      let ny = py + y;
+      return (
+        nx < 0 ||
+        nx >= COLS ||
+        ny >= ROWS ||
+        board[ny]?.[nx]
+      );
     })
   );
 }
@@ -67,10 +77,18 @@ function merge() {
 }
 
 function clearLines() {
-  board = board.filter(row => row.some(v => v === 0));
-  let cleared = ROWS - board.length;
-  linesCleared += cleared;
-  while (board.length < ROWS) board.unshift(Array(COLS).fill(0));
+  for (let y = ROWS - 1; y >= 0; y--) {
+    if (board[y].every(v => v === 1)) {
+      board.splice(y, 1);
+      board.unshift(Array(COLS).fill(0));
+      linesCleared++;
+
+      if (linesCleared >= TARGET) {
+        document.getElementById("letter").style.display = "block";
+        clearInterval(gameLoop);
+      }
+    }
+  }
 }
 
 function drop() {
@@ -79,13 +97,7 @@ function drop() {
     piece.y--;
     merge();
     clearLines();
-
-    if (linesCleared >= TARGET_LINES) {
-      alert("You Win 💖\nHappy monthsary babyy!");
-      location.reload();
-    }
-
-    piece = randomPiece();
+    piece = newPiece();
     if (collide()) {
       alert("Game Over 💔");
       location.reload();
@@ -94,17 +106,15 @@ function drop() {
 }
 
 document.addEventListener("keydown", e => {
-  if (e.key === "ArrowLeft") piece.x--;
-  if (e.key === "ArrowRight") piece.x++;
-  if (e.key === "ArrowDown") drop();
-
-  if (collide()) {
-    if (e.key === "ArrowLeft") piece.x++;
-    if (e.key === "ArrowRight") piece.x--;
-  }
+  if (e.key === "ArrowLeft" && !collide(piece.x - 1, piece.y))
+    piece.x--;
+  if (e.key === "ArrowRight" && !collide(piece.x + 1, piece.y))
+    piece.x++;
+  if (e.key === "ArrowDown")
+    drop();
 });
 
-setInterval(() => {
+const gameLoop = setInterval(() => {
   drop();
-  draw();
-}, 400);
+  drawBoard();
+}, 500);
